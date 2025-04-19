@@ -41,6 +41,10 @@ const findUserById = (id) =>
 
 
 app.use(express.json());
+const addUser = (user) => {
+    users["users_list"].push(user);
+    return users;
+};
 
 app.get("/users/:id", (req, res) => {
     const id = req.params["id"];
@@ -50,6 +54,12 @@ app.get("/users/:id", (req, res) => {
     } else {
         res.send(result);
     }
+});
+
+app.post("/users", (req, res) => {
+    const userToAdd = req.body;
+    addUser(userToAdd);
+    res.send();
 });
 
 app.listen(port, () => {
