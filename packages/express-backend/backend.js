@@ -72,8 +72,10 @@ app.get("/users", (req, res) => {
         )
 
         res.send(result);
+    } else if (!name && !job) {
+        res.send(users);
     } else {
-        res.send(400);
+        res.status(400).send("Must provide name and job");
     }
 });
 
