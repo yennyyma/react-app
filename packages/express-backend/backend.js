@@ -11,7 +11,7 @@ const { MONGO_CONNECTION_STRING } = process.env;
 mongoose.set("debug", true);
 mongoose
     .connect(MONGO_CONNECTION_STRING + "users")
-    .catch((errro) => console.log(error));
+    .catch((error) => console.log(error));
 
 const app = express();
 const port = 8000;
@@ -27,14 +27,67 @@ app.get("/users", (req, res) => {
     const name = req.query["name"];
     const job = req.query["job"];
 
-    userService
-        .getUsers(name, job)
+    if (name && job) {
+        userService
+        .findUserByNameAndJob(name, job)
         .then((users) => {
             res.send({ users_list: users });
         })
         .catch((error) => {
+            console.log("Error retrieving users:", error);
+            res.status(500).json({ error: "Could not retrieve users" }); // Send JSON response
+        });
+    } else if (name) {
+        userService
+        .getUsers(name, undefined)
+        .then((users) => {
+            res.send({ users_list: users });
+        })
+        .catch((error) => {
+            console.log("Error retrieving users:", error);
+            res.status(500).json({ error: "Could not retrieve users" }); // Send JSON response
+        });
+    } else if (job) {
+        userService
+        .getUsers(undefined, job)
+        .then((users) => {
+            res.send({ users_list: users });
+        })
+        .catch((error) => {
+            console.log("Error retrieving users:", error);
+            res.status(500).json({ error: "Could not retrieve users" }); // Send JSON response
+        });
+    } else {
+        userService
+        .getUsers()
+        .then((users) => {
+            res.send({ users_list: users });
+        })
+        .catch((error) => {
+            console.log("Error retrieving users:", error);
+            res.status(500).json({ error: "Could not retrieve users" }); // Send JSON response
+        });
+    }
+});
+
+app.get("/users/:id", (req, res) => {
+    const id = req.params["id"];
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid ID format");
+    }
+
+    userService
+        .findUserById(id)
+        .then((user) => {
+            if (!user) {
+                return res.status(404).send("Could not find user");
+            }
+            res.status(200).send(user);
+        })
+        .catch((error) => {
             console.log(error);
-            res.status(500).send("Could not retrieve users");
+            res.status(500).send("Could not retrieve user");
         });
 });
 
@@ -42,33 +95,39 @@ app.post("/users", (req, res) => {
     const userToAdd = req.body;
 
     if (!userToAdd.name || !userToAdd.job) {
-        res.status(400).send("Provide name and job");
+        return res.status(400).json({ error: "Provide name and job" });
     }
 
     userService
         .addUser(userToAdd)
         .then((newUser) => {
-            res.status(201).send(newUser);
+            const userWithId = { id: newUser._id, name: newUser.name, job: newUser.job };
+            res.status(201).send(userWithId);
+            console.log("New user added: ", userWithId);
+
         })
         .catch((error) => {
-            console.log(error);
-            res.status(500).send("Could not add user");
-        })
+            console.log("Error adding user:", error);
+            res.status(500).json({ error: "Could not add user" });
+        });
 });
 
 app.delete("/users/:id", (req, res) => {
     const id = req.params["id"];
     
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid ID format");
+    }
+
     userService
-        .findUserById(id)
+        .removeUser(id)
         .then((user) => {
             if (!user) {
-                res.status(404).send("Could not find user");
+                return res.status(404).send("Could not find user");
             }
 
-            return userService.removeUser(id).then(() => {
-                res.status(204).send();
-            });
+            res.status(204).send();
+            console.log("Received ID for deletion:", id);
         })
         .catch((error) => {
             console.log(error);

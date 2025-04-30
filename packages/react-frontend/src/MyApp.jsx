@@ -8,13 +8,14 @@ function MyApp() {
   
   function removeOneCharacter(index) {
     const userToDelete = characters[index];
-    fetch (`http://localhost:8000/users/${userToDelete.id}`, {
+    fetch (`http://localhost:8000/users/${userToDelete._id}`, {
       method: "DELETE",
     })
       .then((res) => {
         if (res.status === 204) {
           const updated = characters.filter((character, i) => i !== index);
           setCharacters(updated);
+          console.log("Deleting user with ID:", userToDelete._id);
         }
         else if (res.status === 404) {
           console.log("User not found");
@@ -30,14 +31,21 @@ function MyApp() {
 
   function updateList(person) {
     postUser(person)
-    .then((newUser) => setCharacters([...characters, newUser]))
-    .catch((error) => {
-      console.log(error);
-    });
+      .then((newUser) => {
+        setCharacters([...characters, newUser]);
+        console.log("Updated characters:", characters);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   }
 
   function fetchUsers() {
-    const promise = fetch("http://localhost:8000/users");
+    const promise = fetch("http://localhost:8000/users")
+      .then((res) => res.json())
+      .then((json) => {
+        setCharacters(json["users_list"]);
+      });
     return promise;
   }
 
